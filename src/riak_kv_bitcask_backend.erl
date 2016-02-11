@@ -439,13 +439,16 @@ check_fcntl() ->
 %% Return a function to fold over the buckets on this backend
 fold_buckets_fun(FoldBucketsFun) ->
     fun(#bitcask_entry{key=BK}, {Acc, BucketSet}) ->
-            {Bucket, _} = binary_to_term(BK),
-            case sets:is_element(Bucket, BucketSet) of
-                true ->
-                    {Acc, BucketSet};
-                false ->
-                    {FoldBucketsFun(Bucket, Acc),
-                     sets:add_element(Bucket, BucketSet)}
+            case catch binary_to_term(BK) of
+                {'EXIT',_} -> {Acc, BucketSet};
+                {Bucket, _} ->
+                    case sets:is_element(Bucket, BucketSet) of
+                        true ->
+                            {Acc, BucketSet};
+                        false ->
+                            {FoldBucketsFun(Bucket, Acc),
+                             sets:add_element(Bucket, BucketSet)}
+                    end
             end
     end.
 
@@ -453,17 +456,22 @@ fold_buckets_fun(FoldBucketsFun) ->
 %% Return a function to fold over keys on this backend
 fold_keys_fun(FoldKeysFun, undefined) ->
     fun(#bitcask_entry{key=BK}, Acc) ->
-            {Bucket, Key} = binary_to_term(BK),
-            FoldKeysFun(Bucket, Key, Acc)
+            case catch binary_to_term(BK) of
+                {'EXIT',_} -> Acc;
+                {Bucket, Key} -> FoldKeysFun(Bucket, Key, Acc)
+            end
     end;
 fold_keys_fun(FoldKeysFun, Bucket) ->
     fun(#bitcask_entry{key=BK}, Acc) ->
-            {B, Key} = binary_to_term(BK),
-            case B =:= Bucket of
-                true ->
-                    FoldKeysFun(B, Key, Acc);
-                false ->
-                    Acc
+            case catch binary_to_term(BK) of
+                {'EXIT',_} -> Acc;
+                {B, Key} ->
+                    case B =:= Bucket of
+                        true ->
+                            FoldKeysFun(B, Key, Acc);
+                        false ->
+                            Acc
+                    end
             end
     end.
 
@@ -471,17 +479,22 @@ fold_keys_fun(FoldKeysFun, Bucket) ->
 %% Return a function to fold over keys on this backend
 fold_objects_fun(FoldObjectsFun, undefined) ->
     fun(BK, Value, Acc) ->
-            {Bucket, Key} = binary_to_term(BK),
-            FoldObjectsFun(Bucket, Key, Value, Acc)
+            case catch binary_to_term(BK) of
+                {'EXIT',_} -> Acc;
+                {Bucket, Key} -> FoldObjectsFun(Bucket, Key, Value, Acc)
+            end
     end;
 fold_objects_fun(FoldObjectsFun, Bucket) ->
     fun(BK, Value, Acc) ->
-            {B, Key} = binary_to_term(BK),
-            case B =:= Bucket of
-                true ->
-                    FoldObjectsFun(B, Key, Value, Acc);
-                false ->
-                    Acc
+            case catch binary_to_term(BK) of
+                {'EXIT',_} -> Acc;
+                {B, Key} ->
+                    case B =:= Bucket of
+                        true ->
+                            FoldObjectsFun(B, Key, Value, Acc);
+                        false ->
+                            Acc
+                    end
             end
     end.
 
