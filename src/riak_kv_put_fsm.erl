@@ -593,9 +593,8 @@ process_reply(Reply, StateData = #state{postcommit = PostCommit,
             new_state_timeout(postcommit, StateData2);
         {ok, _} ->
             Values = riak_object:get_values(RObj),
-            %% TODO: more accurate sizing method
-            ApproxBytes = size(Bucket) + size(Key) +
-                lists:sum([size(V) || V <- Values]),
+            %% JP: use erts_debug:size for byte size of any term
+            ApproxBytes = size(Bucket) + size(Key) + erts_debug:size(Values),
             NumSibs = length(Values),
             ?DTRACE(?C_PUT_FSM_PROCESS_REPLY, [1, ApproxBytes, NumSibs], []),
             new_state_timeout(postcommit, StateData2);
